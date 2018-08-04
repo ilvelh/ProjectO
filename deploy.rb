@@ -31,6 +31,7 @@ class Server
     @config = config
     @domain = config['domain']
     ip = Resolv.getaddress(@domain)
+    @pub_ip = ip
     @ip = (config['local_ip'].nil? or config['local_ip'].strip.empty?) ? ip : config['local_ip']
     @enable_udp = config['enable_udp'] || false
     @port = config['port'] || 443
@@ -54,7 +55,7 @@ class Server
     udp_config = @enable_udp ? "udp-port = #{@port}" : ""
     oc_config =<<END
 auth = "certificate"
-listen-host = #{@ip}
+listen-host = #{@pub_ip}
 tcp-port = #{@port}
 #{udp_config}
 run-as-user = nobody
@@ -118,7 +119,7 @@ END
   
   def common_setup
     @session.execute('apt-get update')
-    @session.execute('apt-get upgrade')
+    @session.execute('DEBIAN_FRONTEND=noninteractive apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -y upgrade')
     @session.execute('apt-get -y install gdebi-core')
     @session.execute('apt-get -y install linux-image-4.15.0-29-generic') unless bbr_compatible?
   end
@@ -300,4 +301,3 @@ end
 get '/user.p12' do
   send_file File.join(CERTS_DIR, 'user.p12')
 end
-
